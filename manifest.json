@@ -1,0 +1,22 @@
+{
+  "name": "Oyen Staff Dashboard",
+  "short_name": "Oyen",
+  "description": "Oyen Freshly Baked 365 - Staff Operations",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FDF8F3",
+  "theme_color": "#F4A011",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/F4A011/FFFFFF?text=O",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://placehold.co/512x512/F4A011/FFFFFF?text=O",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
