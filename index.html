@@ -523,6 +523,14 @@ select.fi{appearance:none;}
         <div class="mico" style="background:var(--cream2)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="#8A6820" stroke-width="1.5" fill="none"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4" stroke="#8A6820" stroke-width="1.5" stroke-linecap="round"/></svg></div>
         <div class="mlbl">Settings</div>
       </div>
+      <div class="mbtn" onclick="showSub('sub-manage-staff');loadManageStaff()">
+        <div class="mico" style="background:#E6F1FB"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="#185FA5" stroke-width="1.5" fill="none"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M14 3l2 2-5 5H9V8l5-5z" stroke="#185FA5" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg></div>
+        <div class="mlbl">Manage Staff</div>
+      </div>
+      <div class="mbtn" onclick="showSub('sub-products');loadProducts()">
+        <div class="mico" style="background:#E8F4EC"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="7" height="7" rx="1" stroke="#1A7040" stroke-width="1.5" fill="none"/><rect x="11" y="3" width="7" height="7" rx="1" stroke="#1A7040" stroke-width="1.5" fill="none"/><rect x="2" y="12" width="7" height="7" rx="1" stroke="#1A7040" stroke-width="1.5" fill="none"/><rect x="11" y="12" width="7" height="7" rx="1" stroke="#1A7040" stroke-width="1.5" fill="none"/></svg></div>
+        <div class="mlbl">Products</div>
+      </div>
     </div>
   </div>
 </div>
@@ -623,6 +631,93 @@ select.fi{appearance:none;}
 <div id="sub-handover-view" class="sub-screen">
   <div class="sub-hdr"><button class="back-btn" onclick="closeSub('sub-handover-view')">&#8592; Back</button><div class="sub-t">Handover Notes</div></div>
   <div class="sub-body"><div id="ho-view-list"></div></div>
+</div>
+
+<!-- SUB: MANAGE STAFF -->
+<div id="sub-manage-staff" class="sub-screen">
+  <div class="sub-hdr">
+    <button class="back-btn" onclick="closeSub('sub-manage-staff')">&#8592; Back</button>
+    <div class="sub-t">Manage Staff</div>
+    <button class="back-btn" style="margin-left:auto" onclick="openAddStaffModal()">+ Add Staff</button>
+  </div>
+  <div class="sub-body">
+    <div id="manage-staff-list"></div>
+  </div>
+</div>
+
+<!-- SUB: PRODUCTS -->
+<div id="sub-products" class="sub-screen">
+  <div class="sub-hdr">
+    <button class="back-btn" onclick="closeSub('sub-products')">&#8592; Back</button>
+    <div class="sub-t">Products</div>
+    <button class="back-btn" style="margin-left:auto" onclick="openAddProductModal()">+ Add Product</button>
+  </div>
+  <div class="sub-body">
+    <div id="products-list"></div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT STAFF -->
+<div id="m-staff-edit" class="modal-overlay">
+  <div class="mbox2">
+    <div class="mhdr">
+      <div id="staff-edit-title" class="mtitle">Add Staff</div>
+      <button class="mclose" onclick="closeModal('m-staff-edit')">&#10005;</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="se-staff-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <div class="fg"><label class="fl">Staff ID</label><input type="text" id="se-id" class="fi" placeholder="e.g. S006"></div>
+        <div class="fg"><label class="fl">Full Name</label><input type="text" id="se-name" class="fi"></div>
+        <div class="fg"><label class="fl">Role</label>
+          <select id="se-role" class="fi">
+            <option value="staff">Staff</option>
+            <option value="manager">Manager</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Position / Title</label><input type="text" id="se-position" class="fi" placeholder="e.g. Cashier"></div>
+        <div class="fg"><label class="fl">Base Salary (RM/month)</label><input type="number" id="se-salary" class="fi" placeholder="0"></div>
+        <div class="fg"><label class="fl">PIN (4 digits)</label><input type="text" id="se-pin" class="fi" placeholder="1234" maxlength="4"></div>
+        <div class="fg"><label class="fl">Join Date</label><input type="date" id="se-join" class="fi"></div>
+        <div class="fg"><label class="fl">Status</label>
+          <select id="se-status" class="fi">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">AL Entitlement (days/yr)</label><input type="number" id="se-al" class="fi" value="8"></div>
+        <div class="fg"><label class="fl">MC Entitlement (days/yr)</label><input type="number" id="se-mc" class="fi" value="14"></div>
+      </div>
+      <button class="btn bp bblock" style="margin-top:6px" onclick="saveStaffEdit()">Save Staff</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT PRODUCT -->
+<div id="m-product-edit" class="modal-overlay">
+  <div class="mbox2">
+    <div class="mhdr">
+      <div id="product-edit-title" class="mtitle">Add Product</div>
+      <button class="mclose" onclick="closeModal('m-product-edit')">&#10005;</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="pe-orig-sku">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <div class="fg"><label class="fl">SKU</label><input type="text" id="pe-sku" class="fi" placeholder="e.g. B001"></div>
+        <div class="fg"><label class="fl">Product Name</label><input type="text" id="pe-name" class="fi"></div>
+        <div class="fg"><label class="fl">Category</label><input type="text" id="pe-cat" class="fi" placeholder="e.g. Pastry"></div>
+        <div class="fg"><label class="fl">Opening Stock</label><input type="number" id="pe-open" class="fi" value="0"></div>
+        <div class="fg"><label class="fl">Unit</label><input type="text" id="pe-unit" class="fi" placeholder="pcs"></div>
+        <div class="fg"><label class="fl">Active</label>
+          <select id="pe-active" class="fi">
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn bp bblock" style="margin-top:6px" onclick="saveProductEdit()">Save Product</button>
+    </div>
+  </div>
 </div>
 
 <!-- BOTTOM NAV -->
@@ -803,7 +898,7 @@ function closeModal(id){document.getElementById(id)?.classList.remove('active');
 
 // SCREENS
 const SCREENS=['home','stock','staff','more'];
-const SUB=['sub-sched','sub-leave-approve','sub-ratestaff','sub-allstaff','sub-payroll','sub-config','sub-announce','sub-handover-view'];
+const SUB=['sub-sched','sub-leave-approve','sub-ratestaff','sub-allstaff','sub-payroll','sub-config','sub-announce','sub-handover-view','sub-manage-staff','sub-products'];
 function showScreen(name){
   App.prevScreen=currentScreen();
   SCREENS.forEach(s=>document.getElementById('screen-'+s)?.classList.toggle('active',s===name));
@@ -1457,6 +1552,149 @@ async function saveSched(){
   const r=await api('saveSchedule',{rows,weekStart:ws});
   if(!r.error){toast('Saved!','success');document.getElementById('sched-save-st').textContent='Saved';}
   else toast('Save failed','error');
+}
+
+
+// ── MANAGE STAFF ─────────────────────────────────────────────────────────────
+async function loadManageStaff(){
+  const r = await api('getStaffList');
+  const list = document.getElementById('manage-staff-list');
+  if(!list)return;
+  const staff = Array.isArray(r)?r:[];
+  if(!staff.length){list.innerHTML='<div class="muted" style="text-align:center;padding:20px">No staff found</div>';return;}
+  list.innerHTML = staff.map(s=>`
+    <div class="card" style="margin-bottom:8px">
+      <div class="sb">
+        <div>
+          <div style="font-weight:700;font-size:14px">${s.name} <span style="font-size:10px;background:var(--cream2);color:var(--muted);padding:1px 6px;border-radius:4px;margin-left:4px">${s.role||'staff'}</span></div>
+          <div class="muted">${s.id} · ${s.position||'—'} · RM${s.baseSalary||0}/mo</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn bo bsm" onclick='openEditStaffModal(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
+          <button class="btn bsm" style="background:var(--red-bg);color:var(--red);border:0.5px solid var(--red)" onclick="resetStaffPin('${s.id}','${s.name.split(' ')[0]}')">Reset PIN</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openAddStaffModal(){
+  document.getElementById('staff-edit-title').textContent='Add Staff';
+  ['se-id','se-name','se-position','se-salary','se-pin','se-join'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('se-role').value='staff';
+  document.getElementById('se-status').value='active';
+  document.getElementById('se-al').value='8';
+  document.getElementById('se-mc').value='14';
+  document.getElementById('se-staff-id').value='';
+  showModal('m-staff-edit');
+}
+
+function openEditStaffModal(s){
+  document.getElementById('staff-edit-title').textContent='Edit Staff';
+  document.getElementById('se-staff-id').value=s.id;
+  document.getElementById('se-id').value=s.id;
+  document.getElementById('se-name').value=s.name||'';
+  document.getElementById('se-role').value=s.role||'staff';
+  document.getElementById('se-position').value=s.position||'';
+  document.getElementById('se-salary').value=s.baseSalary||'';
+  document.getElementById('se-pin').value='';
+  document.getElementById('se-status').value='active';
+  showModal('m-staff-edit');
+}
+
+async function saveStaffEdit(){
+  const id=document.getElementById('se-id').value.trim();
+  const name=document.getElementById('se-name').value.trim();
+  if(!id||!name){toast('Staff ID and name required','error');return;}
+  const data={
+    staffId: id, name, role: document.getElementById('se-role').value,
+    position: document.getElementById('se-position').value,
+    baseSalary: document.getElementById('se-salary').value||0,
+    pin: document.getElementById('se-pin').value||'1234',
+    joinDate: document.getElementById('se-join').value,
+    status: document.getElementById('se-status').value,
+    alDays: document.getElementById('se-al').value||8,
+    mcDays: document.getElementById('se-mc').value||14,
+    isEdit: !!document.getElementById('se-staff-id').value,
+  };
+  const r=await api('saveStaff',data);
+  if(r.success){
+    toast(data.isEdit?'Staff updated!':'Staff added!','success');
+    closeModal('m-staff-edit');
+    loadManageStaff();
+    const[sl,cfg]=await Promise.all([api('getStaffList'),api('getConfig')]);
+    App.staffList=Array.isArray(sl)?sl:[];
+    if(!cfg.error)App.config=cfg;
+    buildStaffPickers();
+  } else toast(r.error||'Error','error');
+}
+
+async function resetStaffPin(staffId, name){
+  const newPin=prompt('Enter new PIN for '+name+':');
+  if(!newPin||newPin.length<4){toast('PIN must be 4 digits','error');return;}
+  const r=await api('saveStaff',{staffId,pin:newPin,pinOnly:true});
+  if(r.success)toast('PIN updated for '+name,'success');
+  else toast(r.error||'Error','error');
+}
+
+// ── PRODUCTS ──────────────────────────────────────────────────────────────────
+async function loadProducts(){
+  const r=await api('getStockProducts');
+  const list=document.getElementById('products-list');
+  if(!list)return;
+  const prods=Array.isArray(r)?r:[];
+  if(!prods.length){list.innerHTML='<div class="muted" style="text-align:center;padding:20px">No products. Add your first product.</div>';return;}
+  list.innerHTML=prods.map(p=>`
+    <div class="card" style="margin-bottom:8px">
+      <div class="sb">
+        <div>
+          <div style="font-weight:700;font-size:13px"><span style="background:var(--cream2);color:var(--muted);padding:1px 6px;border-radius:4px;font-size:10px;margin-right:6px">${p.sku}</span>${p.name}</div>
+          <div class="muted">${p.category||'—'} · Opening: ${p.opening||0}</div>
+        </div>
+        <button class="btn bo bsm" onclick='openEditProductModal(${JSON.stringify(p).replace(/'/g,"&#39;")})'>Edit</button>
+      </div>
+    </div>`).join('');
+}
+
+function openAddProductModal(){
+  document.getElementById('product-edit-title').textContent='Add Product';
+  ['pe-sku','pe-name','pe-cat','pe-unit'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('pe-open').value='0';
+  document.getElementById('pe-active').value='Yes';
+  document.getElementById('pe-orig-sku').value='';
+  showModal('m-product-edit');
+}
+
+function openEditProductModal(p){
+  document.getElementById('product-edit-title').textContent='Edit Product';
+  document.getElementById('pe-orig-sku').value=p.sku||'';
+  document.getElementById('pe-sku').value=p.sku||'';
+  document.getElementById('pe-name').value=p.name||'';
+  document.getElementById('pe-cat').value=p.category||'';
+  document.getElementById('pe-open').value=p.opening||0;
+  document.getElementById('pe-unit').value=p.unit||'pcs';
+  document.getElementById('pe-active').value='Yes';
+  showModal('m-product-edit');
+}
+
+async function saveProductEdit(){
+  const sku=document.getElementById('pe-sku').value.trim();
+  const name=document.getElementById('pe-name').value.trim();
+  if(!sku||!name){toast('SKU and name required','error');return;}
+  const data={
+    sku, name,
+    category: document.getElementById('pe-cat').value,
+    opening: document.getElementById('pe-open').value||0,
+    unit: document.getElementById('pe-unit').value||'pcs',
+    active: document.getElementById('pe-active').value,
+    origSku: document.getElementById('pe-orig-sku').value,
+    isEdit: !!document.getElementById('pe-orig-sku').value,
+  };
+  const r=await api('saveProduct',data);
+  if(r.success){
+    toast(data.isEdit?'Product updated!':'Product added!','success');
+    closeModal('m-product-edit');
+    loadProducts();
+  } else toast(r.error||'Error','error');
 }
 
 function todayStr(){return new Date().toISOString().substring(0,10);}
