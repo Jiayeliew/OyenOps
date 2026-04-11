@@ -192,21 +192,34 @@ select.fi{appearance:none;}
 .mico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;}
 .mlbl{font-size:11px;font-weight:600;color:var(--brown2);text-align:center;}
 .msec-t{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;}
-.sched-table{width:100%;border-collapse:collapse;font-size:11px;}
-.sth{padding:6px 4px;text-align:center;font-weight:700;color:var(--muted);font-size:10px;background:var(--cream2);border-bottom:0.5px solid var(--border);}
-.snc{padding:4px 9px;font-size:12px;font-weight:700;color:var(--brown2);text-align:left;white-space:nowrap;border-right:0.5px solid var(--border);}
-.ssch{padding:3px;min-width:60px;}
-.ssbtn{width:100%;padding:6px 2px;border:none;border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;line-height:1.3;letter-spacing:.1px;}
-.sh-E{background:#DBEAFE;color:#1E40AF;}
-.sh-L{background:#FEF3C7;color:#92400E;}
-.sh-X{background:#F3F4F6;color:#6B7280;}
+.sched-table{width:100%;border-collapse:collapse;font-size:12px;}
+.sth{padding:8px 6px;text-align:center;font-weight:700;color:var(--muted);font-size:10px;background:var(--cream2);border-bottom:1px solid var(--border);}
+.snc{padding:10px 12px;font-size:13px;font-weight:800;color:var(--brown2);text-align:left;white-space:nowrap;border-right:1px solid var(--border);min-width:70px;vertical-align:middle;}
+.ssch{padding:6px 5px;min-width:110px;max-width:160px;vertical-align:top;cursor:pointer;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);}
+.ssch:hover{background:rgba(0,0,0,.03);}
+.ssch-A{border-top:2px solid #BFDBFE;}
+.ssch-B{border-top:2px solid #FDE68A;}
+.sh-label-A{background:#EFF6FF;border-right:1px solid var(--border);}
+.sh-label-B{background:#FFFBEB;border-right:1px solid var(--border);}
+.sched-chips{display:flex;flex-wrap:wrap;gap:4px;min-height:28px;}
+.sched-chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;gap:3px;}
+.chip-A{background:#DBEAFE;color:#1E40AF;}
+.chip-B{background:#FEF3C7;color:#92400E;}
+.chip-x{font-size:9px;opacity:.6;font-weight:900;}
+.sched-add-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--cream2);color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;border:1px dashed var(--border2);flex-shrink:0;}
+.sched-count{font-size:9px;color:var(--muted);margin-top:3px;font-weight:600;}
+.sched-count.ok{color:var(--green);}
+.sched-count.warn{color:#92400E;}
 .sh-AL{background:#EDE9FE;color:#5B21B6;}
 .sh-MC{background:#FCE7F3;color:#9D174D;}
-.sh-dash{background:#F9FAFB;color:#CBD5E1;}
-.sched-picker-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.15);}
-.sched-picker{position:fixed;background:white;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);z-index:201;padding:8px;display:flex;flex-direction:column;gap:5px;min-width:150px;}
-.sched-picker-title{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:2px 6px 4px;}
-.sched-picker-opt{padding:9px 14px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:700;text-align:left;}
+.sched-picker-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.2);}
+.sched-picker{position:fixed;background:white;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:201;padding:10px;min-width:180px;max-width:220px;}
+.sched-picker-title{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:2px 4px 8px;}
+.sched-picker-staff{display:flex;flex-direction:column;gap:5px;}
+.sched-picker-staff-btn{padding:9px 12px;border-radius:8px;border:1.5px solid transparent;cursor:pointer;font-size:13px;font-weight:700;text-align:left;transition:all .1s;}
+.sched-picker-staff-btn.sel-A{background:#DBEAFE;color:#1E40AF;border-color:#93C5FD;}
+.sched-picker-staff-btn.sel-B{background:#FEF3C7;color:#92400E;border-color:#FCD34D;}
+.sched-picker-staff-btn.unsel{background:#F9FAFB;color:#9CA3AF;border-color:#F3F4F6;}
 @media(max-width:768px){
   #home-grid{grid-template-columns:1fr;grid-template-rows:auto;overflow-y:auto;}
   .more-grid{grid-template-columns:repeat(3,1fr);}
@@ -1522,89 +1535,127 @@ async function loadSched(){
   const ws=getWeekStart(App.schedWeekOffset),we=wkDate(ws,6);
   document.getElementById('sched-wklbl').textContent=ws+' \u2013 '+we;
   const[all,sl]=await Promise.all([api('getAllSchedule',{weekStart:ws}),api('getStaffList')]);
-  App.schedStaff=Array.isArray(sl)?sl:[];App.schedData={};
+  App.schedStaff=Array.isArray(sl)?sl:[];
+  App.schedData={};
   (Array.isArray(all)?all:[]).forEach(r=>{
-    const ds=String(r['Date']||'').substring(0,10),sid=String(r['Staff ID']);
-    const st=r['Status']||'',sh=r['Shift']||'';
-    App.schedData[sid+'_'+ds]=st==='leave'?'AL':sh==='morning'?'A':sh==='evening'?'B':'REHAT';
+    const ds=String(r['Date']||'').substring(0,10);
+    const sh=r['Shift']||'',st=r['Status']||'',sid=String(r['Staff ID']);
+    if(st==='leave')return;
+    const shKey=(sh==='morning'?'A':'B')+'_'+ds;
+    if(!App.schedData[shKey])App.schedData[shKey]=[];
+    if(!App.schedData[shKey].includes(sid))App.schedData[shKey].push(sid);
   });
   renderSched(ws);
 }
 function renderSched(ws){
   const area=document.getElementById('sched-grid');if(!area)return;
   const tod=todayStr();
-  let h=`<table class="sched-table"><thead><tr><th class="sth" style="text-align:left;min-width:80px;padding-left:9px">Staff</th>`;
-  DAY_NAMES.forEach((d,i)=>{const ds=wkDate(ws,i);h+=`<th class="sth" style="${ds===tod?'color:var(--amber);font-weight:900':''}">${d}<br><span style="font-size:9px;font-weight:400">${new Date(ds).getDate()}/${new Date(ds).getMonth()+1}</span></th>`;});
+  let h=`<table class="sched-table"><thead><tr>
+    <th class="sth" style="text-align:left;padding-left:12px;min-width:70px"></th>`;
+  DAY_NAMES.forEach((d,i)=>{
+    const ds=wkDate(ws,i),isT=ds===tod;
+    const cntA=(App.schedData['A_'+ds]||[]).length;
+    const cntB=(App.schedData['B_'+ds]||[]).length;
+    h+=`<th class="sth" style="${isT?'color:var(--amber);font-weight:900':''}">${d}<br>
+      <span style="font-size:9px;font-weight:400">${new Date(ds+'T00:00:00').getDate()}/${new Date(ds+'T00:00:00').getMonth()+1}</span><br>
+      <span style="font-size:9px;font-weight:600;color:var(--muted)">${cntA}+${cntB}</span></th>`;
+  });
   h+=`</tr></thead><tbody>`;
-  App.schedStaff.forEach((s,si)=>{
-    const rowBg=si%2?'background:var(--cream)':'';
-    h+=`<tr style="${rowBg}"><td class="snc">${s.name.split(' ')[0]}<br><span style="font-size:8px;color:var(--muted);font-weight:400">${s.position||''}</span></td>`;
+  ['A','B'].forEach(shift=>{
+    const isA=shift==='A';
+    h+=`<tr><td class="snc ${isA?'sh-label-A':'sh-label-B'}">Shift ${shift}<br>
+      <span style="font-size:9px;font-weight:600;color:${isA?'#1E40AF':'#92400E'}">${isA?'07–15':'14–22'}</span></td>`;
     for(let di=0;di<7;di++){
-      const ds=wkDate(ws,di),k=String(s.id)+'_'+ds,v=App.schedData[k]||'REHAT',info=SHIFT_INFO[v]||SHIFT_INFO['REHAT'];
-      h+=`<td class="ssch"><button class="ssbtn ${info.cls}" data-k="${k}" onclick="pickShift('${s.id}','${ds}','${k}',this)">${info.label}</button></td>`;
+      const ds=wkDate(ws,di),key=shift+'_'+ds;
+      const ids=App.schedData[key]||[];
+      const chips=ids.map(sid=>{
+        const s=App.schedStaff.find(x=>String(x.id)===sid);
+        return s?`<span class="sched-chip chip-${shift}" onclick="removeFromShift(event,'${shift}','${ds}','${sid}')">${s.name.split(' ')[0]}<span class="chip-x"> ✕</span></span>`:'';
+      }).join('');
+      const warn=ids.length===0?'warn':ids.length>=3?'ok':'';
+      h+=`<td class="ssch ssch-${shift}" onclick="openShiftPicker('${shift}','${ds}',this)">
+        <div class="sched-chips">${chips}<span class="sched-add-btn">+</span></div>
+        <div class="sched-count ${warn}">${ids.length} orang</div></td>`;
     }
     h+=`</tr>`;
   });
   area.innerHTML=h+'</tbody></table>';
   document.getElementById('sched-save-st').textContent='';
 }
-function pickShift(sid,ds,key,btn){
+
+function removeFromShift(e,shift,ds,sid){
+  e.stopPropagation();
+  const key=shift+'_'+ds;
+  if(App.schedData[key])App.schedData[key]=App.schedData[key].filter(x=>x!==sid);
+  document.getElementById('sched-save-st').textContent='● Unsaved';
+  renderSched(getWeekStart(App.schedWeekOffset));
+}
+
+function openShiftPicker(shift,ds,cellEl){
   document.getElementById('sched-picker-overlay')?.remove();
-  const PICK_OPTS=[
-    {k:'A',    label:'A  07–15', bg:'#DBEAFE',color:'#1E40AF'},
-    {k:'B',    label:'B  14–22', bg:'#FEF3C7',color:'#92400E'},
-    {k:'REHAT',label:'REHAT',    bg:'#F3F4F6',color:'#6B7280'},
-    {k:'—',    label:'—  (PT Off)',bg:'#F9FAFB',color:'#9CA3AF'},
-    {k:'AL',   label:'AL (Cuti)', bg:'#EDE9FE',color:'#5B21B6'},
-    {k:'MC',   label:'MC (Sakit)',bg:'#FCE7F3',color:'#9D174D'},
-  ];
+  const key=shift+'_'+ds;
+  const selected=App.schedData[key]||[];
   const ov=document.createElement('div');
   ov.id='sched-picker-overlay';ov.className='sched-picker-overlay';
   const pk=document.createElement('div');pk.className='sched-picker';
-  const r=btn.getBoundingClientRect();
-  pk.style.top=Math.min(r.bottom+4, window.innerHeight-300)+'px';
-  pk.style.left=Math.min(r.left, window.innerWidth-165)+'px';
+  const r=cellEl.getBoundingClientRect();
+  const pkTop=Math.min(r.top+10, window.innerHeight-320);
+  const pkLeft=Math.max(4,Math.min(r.right+6, window.innerWidth-230));
+  pk.style.cssText=`top:${pkTop}px;left:${pkLeft}px;`;
+  const d=new Date(ds+'T00:00:00');
   const tit=document.createElement('div');tit.className='sched-picker-title';
-  tit.textContent='Pilih Shift';pk.appendChild(tit);
-  PICK_OPTS.forEach(o=>{
-    const b=document.createElement('button');b.className='sched-picker-opt';
-    b.textContent=o.label;b.style.background=o.bg;b.style.color=o.color;
-    b.onclick=()=>{
-      App.schedData[key]=o.k;
-      const info=SHIFT_INFO[o.k];
-      document.querySelectorAll(`.ssbtn[data-k="${key}"]`).forEach(el=>{el.className='ssbtn '+info.cls;el.textContent=info.label;});
+  tit.textContent=`Shift ${shift} · ${DAY_NAMES[d.getDay()===0?6:d.getDay()-1]} ${d.getDate()}/${d.getMonth()+1}`;
+  pk.appendChild(tit);
+  const grid=document.createElement('div');grid.className='sched-picker-staff';
+  App.schedStaff.forEach(s=>{
+    const sid=String(s.id),isSel=selected.includes(sid);
+    const btn=document.createElement('button');
+    btn.className='sched-picker-staff-btn '+(isSel?(shift==='A'?'sel-A':'sel-B'):'unsel');
+    btn.innerHTML=`${s.name.split(' ')[0]}&nbsp;<span style="font-size:9px;opacity:.5">${s.position||''}</span>${isSel?' ✓':''}`;
+    btn.onclick=()=>{
+      if(!App.schedData[key])App.schedData[key]=[];
+      const idx=App.schedData[key].indexOf(sid);
+      if(idx>-1)App.schedData[key].splice(idx,1);
+      else App.schedData[key].push(sid);
       document.getElementById('sched-save-st').textContent='● Unsaved';
+      renderSched(getWeekStart(App.schedWeekOffset));
       ov.remove();
     };
-    pk.appendChild(b);
+    grid.appendChild(btn);
   });
+  pk.appendChild(grid);
   ov.appendChild(pk);
   ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
   document.body.appendChild(ov);
 }
 
-// DEFAULT SCHEDULE (6 FT + 3 PT per jadual_kerja.docx)
-// Patterns indexed by staff order [Mon,Tue,Wed,Thu,Fri,Sat,Sun]
+// DEFAULT SCHEDULE (6FT+3PT per jadual_kerja.docx)
+// Each staff index → [{s:'A'|'B', d:[dayIndices 0=Mon..6=Sun]}]
 const DEFAULT_PATTERNS=[
-  ['REHAT','A','A','A','A','A','A'],  // FT1 – Pagi, rehat Isnin
-  ['A','REHAT','A','A','A','A','A'],  // FT2 – Pagi, rehat Selasa
-  ['A','A','REHAT','A','A','A','A'],  // FT3 – Pagi, rehat Rabu
-  ['B','B','B','REHAT','B','B','B'],  // FT4 – Malam, rehat Khamis
-  ['B','B','B','B','REHAT','B','B'],  // FT5 – Malam, rehat Jumaat
-  ['B','B','B','B','B','B','REHAT'],  // FT6 – Malam, rehat Ahad
-  ['A','A','A','—','—','—','—'],     // PT-X – Awal minggu, Pagi
-  ['—','—','—','B','B','B','—'],     // PT-Y – Pertengahan, Malam
-  ['—','—','—','—','B','A','B'],     // PT-Z – Hujung minggu
+  [{s:'A',d:[1,2,3,4,5,6]}],               // FT1 Pagi – rehat Isnin
+  [{s:'A',d:[0,2,3,4,5,6]}],               // FT2 Pagi – rehat Selasa
+  [{s:'A',d:[0,1,3,4,5,6]}],               // FT3 Pagi – rehat Rabu
+  [{s:'B',d:[0,1,2,4,5,6]}],               // FT4 Malam – rehat Khamis
+  [{s:'B',d:[0,1,2,3,5,6]}],               // FT5 Malam – rehat Jumaat
+  [{s:'B',d:[0,1,2,3,4,5]}],               // FT6 Malam – rehat Ahad
+  [{s:'A',d:[0,1,2]}],                     // PT-X – Isnin–Rabu Pagi
+  [{s:'B',d:[3,4,5]}],                     // PT-Y – Khamis–Sabtu Malam
+  [{s:'B',d:[4]},{s:'A',d:[5]},{s:'B',d:[6]}], // PT-Z – Jum(B) Sab(A) Ahad(B)
 ];
 function applyDefaultSched(){
   if(!App.schedStaff.length){toast('No staff loaded','error');return;}
   const ws=getWeekStart(App.schedWeekOffset);
+  App.schedData={};
   App.schedStaff.forEach((s,si)=>{
-    const pat=DEFAULT_PATTERNS[si];if(!pat)return;
-    for(let di=0;di<7;di++){
-      const ds=wkDate(ws,di),k=String(s.id)+'_'+ds;
-      App.schedData[k]=pat[di];
-    }
+    const pats=DEFAULT_PATTERNS[si];if(!pats)return;
+    const sid=String(s.id);
+    pats.forEach(({s:shift,d:days})=>{
+      days.forEach(di=>{
+        const ds=wkDate(ws,di),key=shift+'_'+ds;
+        if(!App.schedData[key])App.schedData[key]=[];
+        if(!App.schedData[key].includes(sid))App.schedData[key].push(sid);
+      });
+    });
   });
   renderSched(ws);
   document.getElementById('sched-save-st').textContent='● Unsaved';
@@ -1612,10 +1663,15 @@ function applyDefaultSched(){
 }
 async function saveSched(){
   const ws=getWeekStart(App.schedWeekOffset),rows=[];
-  App.schedStaff.forEach(s=>{
+  ['A','B'].forEach(shift=>{
+    const sheetShift=shift==='A'?'morning':'evening';
     for(let di=0;di<7;di++){
-      const ds=wkDate(ws,di),k=String(s.id)+'_'+ds,v=App.schedData[k]||'X',info=SHIFT_INFO[v];
-      rows.push({weekStart:ws,dayOfWeek:DAY_NAMES[di],date:ds,shift:info.sheetShift,staffId:s.id,staffName:s.name,status:info.sheetStatus});
+      const ds=wkDate(ws,di),key=shift+'_'+ds;
+      (App.schedData[key]||[]).forEach(sid=>{
+        const s=App.schedStaff.find(x=>String(x.id)===sid);
+        if(!s)return;
+        rows.push({weekStart:ws,dayOfWeek:DAY_NAMES[di],date:ds,shift:sheetShift,staffId:s.id,staffName:s.name,status:'scheduled'});
+      });
     }
   });
   const r=await api('saveSchedule',{rows,weekStart:ws});
