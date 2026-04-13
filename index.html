@@ -225,6 +225,15 @@ select.fi{appearance:none;}
   .more-grid{grid-template-columns:repeat(3,1fr);}
   .sg4{grid-template-columns:repeat(2,1fr);}
 }
+/* FACE RECOGNITION */
+#face-overlay-wrap{position:relative;display:inline-block;width:100%;}
+#face-canvas-overlay{position:absolute;top:0;left:0;pointer-events:none;}
+#face-status{padding:6px 12px;text-align:center;font-size:12px;font-weight:600;min-height:32px;color:white;background:rgba(0,0,0,.5);}
+#face-status.ok{background:rgba(26,112,64,.85);}
+#face-status.warn{background:rgba(192,48,32,.85);}
+#face-status.info{background:rgba(30,95,165,.7);}
+.face-enroll-btn{display:flex;align-items:center;gap:5px;border:1.5px solid var(--amber);background:var(--amber-pale);color:var(--amber2);border-radius:5px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+.face-enroll-btn.done{border-color:var(--green);background:var(--green-bg);color:var(--green);}
 </style>
 </head>
 <body>
@@ -236,14 +245,16 @@ select.fi{appearance:none;}
     <div id="cam-hdr"><div id="cam-title">Take Photo</div><button class="cam-sk" onclick="closeCam();dispatchCam(null)">Skip</button></div>
     <video id="cam-video" autoplay playsinline></video>
     <canvas id="cam-canvas"></canvas>
+    <div id="face-status" class="info">Initialising face scanner…</div>
     <div id="cam-wm"></div>
     <div class="cam-ctrl">
-      <button class="cam-sk" onclick="closeCam();dispatchCam(null)">Skip</button>
-      <button class="cam-sh" onclick="capPhoto()"></button>
+      <button class="cam-sk" id="cam-skip-btn" onclick="closeCam();dispatchCam(null)">Skip</button>
+      <button class="cam-sh" id="cam-shoot-btn" onclick="capPhoto()"></button>
       <div style="width:70px;font-size:10px;color:rgba(255,255,255,.4);text-align:center">Tap to capture</div>
     </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <!-- TOP BAR -->
 <div id="top-bar">
@@ -892,6 +903,9 @@ const App={
   pinBuffer:[],qaStaff:null,qaAction:null,
   salesHidden:true,monthHidden:true,
   salesTimer:null,monthTimer:null,moreRole:null,
+  faceDescriptors:{},   // { staffId: Float32Array }
+  faceModelsLoaded:false,
+  faceDetectLoop:null,
 };
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_NAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -958,6 +972,8 @@ window.addEventListener('load',async()=>{
   buildStaffPickers();
   fetchHolidays();
   setInterval(()=>{if(currentScreen()==='home')loadHome();},5*60*1000);
+  // Load face models + descriptors in background
+  loadFaceModels().then(()=>loadFaceDescriptors());
 });
 
 function updateClock(){
@@ -1173,16 +1189,100 @@ async function qaGo(){
   }
 }
 
+// ── FACE RECOGNITION ──────────────────────────────────────────────────────────
+const FACE_MODEL_URL='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+const FACE_THRESHOLD=0.52; // lower = stricter. 0.5 tight, 0.55 relaxed
+
+async function loadFaceModels(){
+  if(App.faceModelsLoaded)return;
+  try{
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(FACE_MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL),
+    ]);
+    App.faceModelsLoaded=true;
+    setFaceStatus('Ready — tap shutter to capture','info');
+  }catch(e){
+    setFaceStatus('Face scanner unavailable','warn');
+  }
+}
+
+async function loadFaceDescriptors(){
+  try{
+    const r=await api('getFaceDescriptors');
+    if(Array.isArray(r)){
+      r.forEach(row=>{
+        if(row.staffId&&row.descriptor){
+          try{App.faceDescriptors[row.staffId]=new Float32Array(JSON.parse(row.descriptor));}catch(_){}
+        }
+      });
+    }
+  }catch(_){}
+}
+
+function setFaceStatus(msg,cls='info'){
+  const el=document.getElementById('face-status');
+  if(!el)return;
+  el.textContent=msg;
+  el.className=cls;
+}
+
 // CAMERA
 async function openCam(mode){
-  App.camMode=mode;document.getElementById('cam-ov').classList.add('active');
-  const titles={clockin:'Clock In Selfie',clockout:'Clock Out Selfie',faulty:'Faulty Photo'};
+  App.camMode=mode;
+  document.getElementById('cam-ov').classList.add('active');
+  const titles={clockin:'Clock In 📸',clockout:'Clock Out 📸',faulty:'Faulty Photo',enroll:'Register Face'};
   document.getElementById('cam-title').textContent=titles[mode]||'Take Photo';
-  try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});App.camStream=s;document.getElementById('cam-video').srcObject=s;}
-  catch(_){closeCam();dispatchCam(null);}
+  // Enroll and clock modes: show face scanner; faulty: simple photo
+  const showFace=(mode==='clockin'||mode==='clockout'||mode==='enroll');
+  const skipBtn=document.getElementById('cam-skip-btn');
+  if(skipBtn)skipBtn.style.display=(mode==='enroll')?'none':'';
+  if(showFace&&App.faceModelsLoaded)setFaceStatus('Scanning for face…','info');
+  else if(showFace&&!App.faceModelsLoaded)setFaceStatus('Loading face scanner…','info');
+  else setFaceStatus('','info');
+  document.getElementById('face-status').style.display=showFace?'':'none';
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    App.camStream=s;
+    document.getElementById('cam-video').srcObject=s;
+    if(showFace)startFaceDetectLoop();
+  }catch(_){closeCam();dispatchCam(null);}
 }
-function closeCam(){App.camStream?.getTracks().forEach(t=>t.stop());App.camStream=null;document.getElementById('cam-ov').classList.remove('active');}
-function capPhoto(){
+
+function startFaceDetectLoop(){
+  stopFaceDetectLoop();
+  const video=document.getElementById('cam-video');
+  async function detect(){
+    if(!App.camStream||!App.faceModelsLoaded){App.faceDetectLoop=setTimeout(detect,500);return;}
+    try{
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}));
+      if(det){
+        setFaceStatus('Face detected ✓ — tap to capture','ok');
+        document.getElementById('cam-shoot-btn').style.opacity='1';
+      }else{
+        setFaceStatus('No face detected — centre your face','warn');
+        document.getElementById('cam-shoot-btn').style.opacity='0.4';
+      }
+    }catch(_){}
+    App.faceDetectLoop=setTimeout(detect,400);
+  }
+  detect();
+}
+
+function stopFaceDetectLoop(){
+  if(App.faceDetectLoop){clearTimeout(App.faceDetectLoop);App.faceDetectLoop=null;}
+  const btn=document.getElementById('cam-shoot-btn');if(btn)btn.style.opacity='1';
+}
+
+function closeCam(){
+  stopFaceDetectLoop();
+  App.camStream?.getTracks().forEach(t=>t.stop());
+  App.camStream=null;
+  document.getElementById('cam-ov').classList.remove('active');
+}
+
+async function capPhoto(){
   const v=document.getElementById('cam-video'),c=document.getElementById('cam-canvas');
   c.width=v.videoWidth||640;c.height=v.videoHeight||480;
   const ctx=c.getContext('2d');ctx.drawImage(v,0,0);
@@ -1190,8 +1290,67 @@ function capPhoto(){
   ctx.font='bold 13px sans-serif';const tw=ctx.measureText(now).width;
   ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(6,c.height-29,tw+12,23);
   ctx.fillStyle='#5C3A0A';ctx.fillText(now,12,c.height-12);
-  const b64=c.toDataURL('image/jpeg',.85);closeCam();dispatchCam(b64);
+  const b64=c.toDataURL('image/jpeg',.85);
+  const mode=App.camMode;
+
+  // For clock-in/out: run face recognition BEFORE dispatching
+  if((mode==='clockin'||mode==='clockout')&&App.faceModelsLoaded){
+    setFaceStatus('Verifying identity…','info');
+    const staffId=App.staff?.id||App.qaStaff?.id;
+    const result=await verifyFaceInImage(c,staffId);
+    closeCam();
+    if(result==='no_face'){
+      toast('No face detected in photo. Try again.','error');return;
+    }else if(result==='no_enrollment'){
+      toast('Face not enrolled — proceed with photo only','');
+      dispatchCam(b64);
+    }else if(result==='mismatch'){
+      toast('⛔ Face doesn\'t match! Proxy clocking blocked.','error');return;
+    }else{
+      // match OK
+      dispatchCam(b64);
+    }
+    return;
+  }
+
+  // Enroll mode: extract descriptor and save
+  if(mode==='enroll'){
+    setFaceStatus('Extracting face data…','info');
+    try{
+      const det=await faceapi.detectSingleFace(c,new faceapi.TinyFaceDetectorOptions({inputSize:320})).withFaceLandmarks(true).withFaceDescriptor();
+      if(!det){closeCam();toast('No face detected — try again','error');return;}
+      closeCam();
+      const descriptor=Array.from(det.descriptor);
+      const r=await api('saveFaceDescriptor',{staffId:App._enrollStaffId,descriptor:JSON.stringify(descriptor)});
+      if(r.success){
+        App.faceDescriptors[App._enrollStaffId]=new Float32Array(descriptor);
+        toast('Face enrolled!','success');
+        loadManageStaff();
+      }else toast(r.error||'Save error','error');
+    }catch(e){closeCam();toast('Face detection error','error');}
+    return;
+  }
+
+  closeCam();dispatchCam(b64);
 }
+
+async function verifyFaceInImage(canvas,staffId){
+  try{
+    const det=await faceapi.detectSingleFace(canvas,new faceapi.TinyFaceDetectorOptions({inputSize:320})).withFaceLandmarks(true).withFaceDescriptor();
+    if(!det)return'no_face';
+    const enrolled=App.faceDescriptors[staffId];
+    if(!enrolled)return'no_enrollment';
+    const dist=faceapi.euclideanDistance(det.descriptor,enrolled);
+    return dist<=FACE_THRESHOLD?'match':'mismatch';
+  }catch(_){return'no_enrollment';}
+}
+
+function enrollFace(staffId,staffName){
+  App._enrollStaffId=staffId;
+  App.staff=App.staff||{id:staffId,name:staffName};
+  openCam('enroll');
+}
+
 function dispatchCam(b64){
   const m=App.camMode;
   if(m==='clockin')clockInPhoto(b64);
@@ -1687,19 +1846,24 @@ async function loadManageStaff(){
   if(!list)return;
   const staff = Array.isArray(r)?r:[];
   if(!staff.length){list.innerHTML='<div class="muted" style="text-align:center;padding:20px">No staff found</div>';return;}
-  list.innerHTML = staff.map(s=>`
+  list.innerHTML = staff.map(s=>{
+    const hasDesc=!!App.faceDescriptors[s.id];
+    return`
     <div class="card" style="margin-bottom:8px">
       <div class="sb">
         <div>
           <div style="font-weight:700;font-size:14px">${s.name} <span style="font-size:10px;background:var(--cream2);color:var(--muted);padding:1px 6px;border-radius:4px;margin-left:4px">${s.role||'staff'}</span></div>
           <div class="muted">${s.id} · ${s.position||'—'} · RM${s.baseSalary||0}/mo</div>
         </div>
-        <div style="display:flex;gap:7px">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="face-enroll-btn ${hasDesc?'done':''}" onclick="enrollFace('${s.id}','${s.name.split(' ')[0]}')" title="${hasDesc?'Re-register face':'Register face for this staff'}">
+            ${hasDesc?'✅ Face':'📸 Face'}
+          </button>
           <button class="btn bo bsm" onclick='openEditStaffModal(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
           <button class="btn bsm" style="background:var(--red-bg);color:var(--red);border:0.5px solid var(--red)" onclick="resetStaffPin('${s.id}','${s.name.split(' ')[0]}')">Reset PIN</button>
         </div>
       </div>
-    </div>`).join('');
+    </div>`}).join('');
 }
 
 function openAddStaffModal(){
