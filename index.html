@@ -254,7 +254,6 @@ select.fi{appearance:none;}
     </div>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
 <!-- TOP BAR -->
 <div id="top-bar">
@@ -972,8 +971,6 @@ window.addEventListener('load',async()=>{
   buildStaffPickers();
   fetchHolidays();
   setInterval(()=>{if(currentScreen()==='home')loadHome();},5*60*1000);
-  // Load face models + descriptors in background
-  loadFaceModels().then(()=>loadFaceDescriptors());
 });
 
 function updateClock(){
@@ -1195,6 +1192,7 @@ const FACE_THRESHOLD=0.52; // lower = stricter. 0.5 tight, 0.55 relaxed
 
 async function loadFaceModels(){
   if(App.faceModelsLoaded)return;
+  if(typeof faceapi==='undefined'){setFaceStatus('Face scanner unavailable','warn');return;}
   try{
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
@@ -1254,7 +1252,7 @@ function startFaceDetectLoop(){
   stopFaceDetectLoop();
   const video=document.getElementById('cam-video');
   async function detect(){
-    if(!App.camStream||!App.faceModelsLoaded){App.faceDetectLoop=setTimeout(detect,500);return;}
+    if(!App.camStream||!App.faceModelsLoaded||typeof faceapi==='undefined'){App.faceDetectLoop=setTimeout(detect,500);return;}
     try{
       const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}));
       if(det){
@@ -1336,6 +1334,7 @@ async function capPhoto(){
 
 async function verifyFaceInImage(canvas,staffId){
   try{
+    if(typeof faceapi==='undefined')return'no_enrollment';
     const det=await faceapi.detectSingleFace(canvas,new faceapi.TinyFaceDetectorOptions({inputSize:320})).withFaceLandmarks(true).withFaceDescriptor();
     if(!det)return'no_face';
     const enrolled=App.faceDescriptors[staffId];
@@ -2005,6 +2004,11 @@ setTimeout(() => {
     sel.innerHTML = '<option value="">Select</option>' + App.staffList.map(s => `<option>${s.name.split(' ')[0]}</option>`).join('');
   }
 }, 2500);
+</script>
+<!-- face-api.js loaded LAST with defer so it never blocks the app -->
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"
+  onload="loadFaceModels().then(()=>loadFaceDescriptors())"
+  onerror="console.warn('face-api.js failed to load — face recognition disabled')">
 </script>
 </body>
 </html>
