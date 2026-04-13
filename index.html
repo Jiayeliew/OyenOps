@@ -891,7 +891,7 @@ select.fi{appearance:none;}
 </div>
 
 <script>
-const SHEET_URL='https://script.google.com/macros/s/AKfycbwpKoMoWMvALsl6wiO2Gn6ZyLki0epIenIN8eUD7zioSc0MqqlS4UQRRSdDZOzXaRbj/exec';
+const SHEET_URL='https://script.google.com/macros/s/AKfycbx0Nq6usL3rCdAu7FkEDYxZoi4QR0038Zmcwsnru9ZqlF0JYGLGaHX8k-Yo15-hMys7/exec';
 const OWNER={id:'OWNER',name:'Owner',pin:'1234',role:'owner'};
 const App={
   staff:null,config:{},prevScreen:null,
@@ -1236,8 +1236,8 @@ async function openCam(mode){
   const showFace=(mode==='clockin'||mode==='clockout'||mode==='enroll');
   const skipBtn=document.getElementById('cam-skip-btn');
   if(skipBtn)skipBtn.style.display=(mode==='enroll')?'none':'';
-  if(showFace&&App.faceModelsLoaded)setFaceStatus('Scanning for face…','info');
-  else if(showFace&&!App.faceModelsLoaded)setFaceStatus('Loading face scanner…','info');
+  if(showFace&&App.faceModelsLoaded)setFaceStatus('Face scanner ready — centre your face then capture','info');
+  else if(showFace&&!App.faceModelsLoaded)setFaceStatus('⏳ Loading face scanner… please wait before capturing','warn');
   else setFaceStatus('','info');
   document.getElementById('face-status').style.display=showFace?'':'none';
   try{
@@ -1313,19 +1313,35 @@ async function capPhoto(){
 
   // Enroll mode: extract descriptor and save
   if(mode==='enroll'){
-    setFaceStatus('Extracting face data…','info');
-    try{
-      const det=await faceapi.detectSingleFace(c,new faceapi.TinyFaceDetectorOptions({inputSize:320})).withFaceLandmarks(true).withFaceDescriptor();
-      if(!det){closeCam();toast('No face detected — try again','error');return;}
+    // Check models loaded
+    if(!App.faceModelsLoaded||typeof faceapi==='undefined'){
       closeCam();
+      toast('Face scanner still loading — wait a moment and try again','error');
+      return;
+    }
+    setFaceStatus('Extracting face data…','info');
+    // Timeout safety: 15s max
+    const timeoutP=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15000));
+    try{
+      const detP=faceapi.detectSingleFace(c,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.4})).withFaceLandmarks().withFaceDescriptor();
+      const det=await Promise.race([detP,timeoutP]);
+      closeCam();
+      if(!det){toast('No face detected — make sure your face is well-lit and centred','error');return;}
       const descriptor=Array.from(det.descriptor);
+      toast('Saving…','');
       const r=await api('saveFaceDescriptor',{staffId:App._enrollStaffId,descriptor:JSON.stringify(descriptor)});
       if(r.success){
         App.faceDescriptors[App._enrollStaffId]=new Float32Array(descriptor);
-        toast('Face enrolled!','success');
+        toast('✅ Face enrolled for '+App._enrollStaffId+'!','success');
         loadManageStaff();
-      }else toast(r.error||'Save error','error');
-    }catch(e){closeCam();toast('Face detection error','error');}
+      }else{
+        toast(r.error||'Save failed — check if saveFaceDescriptor is deployed','error');
+      }
+    }catch(e){
+      closeCam();
+      if(e.message==='timeout')toast('Detection timed out — try again in better lighting','error');
+      else toast('Face detection error: '+e.message,'error');
+    }
     return;
   }
 
@@ -1335,7 +1351,7 @@ async function capPhoto(){
 async function verifyFaceInImage(canvas,staffId){
   try{
     if(typeof faceapi==='undefined')return'no_enrollment';
-    const det=await faceapi.detectSingleFace(canvas,new faceapi.TinyFaceDetectorOptions({inputSize:320})).withFaceLandmarks(true).withFaceDescriptor();
+    const det=await faceapi.detectSingleFace(canvas,new faceapi.TinyFaceDetectorOptions({inputSize:320})).withFaceLandmarks().withFaceDescriptor();
     if(!det)return'no_face';
     const enrolled=App.faceDescriptors[staffId];
     if(!enrolled)return'no_enrollment';
